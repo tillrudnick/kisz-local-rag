@@ -5,6 +5,7 @@ from chromadb.utils import embedding_functions
 import requests, json, random
 from parameters import EMBEDDING_MODEL, CHROMA_DATA_PATH
 from parameters import LLMBASEURL, MODEL
+from load_csv import load_csv
 
 
 def make_collection(data_path, collection_name, skip_included_files=True):
@@ -22,7 +23,7 @@ def make_collection(data_path, collection_name, skip_included_files=True):
         metadata={"hnsw:space": "cosine"},
     )
 
-    files = list_files(data_path, extensions=('.txt', '.pdf'))
+    files = list_files(data_path, extensions=('.csv'))
     print(f"Embedding files: {', '.join(files)} ...")
 
     if skip_included_files:
@@ -31,14 +32,15 @@ def make_collection(data_path, collection_name, skip_included_files=True):
     for f in files:
         _, file_name = os.path.split(f)
 
-        if skip_included_files and file_name in sources:
-            print(file_name, "already in Vector-DB, skipping...")
-            continue
-
-        text = read_file(f)
+        # if skip_included_files and file_name in sources:
+        #     print(file_name, "already in Vector-DB, skipping...")
+        #     continue
+        #
+        # text = read_file(f)
 
         print(f"Getting chunks for {file_name} ...")
-        chunks = get_chunks(text)
+        # chunks = get_chunks(text)
+        chunks = load_csv()
 
         print(f"Embedding and storing {file_name} ...")
         collection.add(
@@ -70,27 +72,30 @@ def get_relevant_text(collection, query='', nresults=2, sim_th=None):
     if sim_th is not None:
         similarities = [1 - d for d in query_result.get("distances")[0]]
         relevant_docs = [d for d, s in zip(docs, similarities) if s >= sim_th]
-        return ''.join(relevant_docs)
+        return '\n'.join(relevant_docs)
     return ''.join(docs)
 
 
 # LLM Funcs (Ollama)
-def generate(prompt, top_k=5, top_p=0.9, temp=0.2):
-    url = LLMBASEURL + "/generate"
-    data = {
-        "prompt": prompt,
-        "model": MODEL,
-        "stream": False,
-        "options": {"temperature": temp, "top_p": top_p, "top_k": top_k},
-    }
+def generate(prompt, tokenizer, model, top_k=5, top_p=0.9, temp=0.2):
+    # Tokenize the input prompt for the model
+    inputs = tokenizer(prompt, return_tensors="pt", padding=True).to(model.device)
 
-    try:
-        r = requests.post(url, json=data)
-        response_dic = json.loads(r.text)
-        return response_dic.get('response', '')
+    # Generate a response using the model
+    outputs = model.generate(
+        **inputs,
+        max_length=500,  # Adjust as necessary
+        num_return_sequences=1,
+        # temperature=temp,
+        # top_p=top_p,
+        # top_k=top_k,
+        no_repeat_ngram_size=2,  # Optional: to avoid repetitive text
+    )
 
-    except Exception as e:
-        print(e)
+    # Decode the generated ids to text
+    generated_text = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return generated_text
+
 
 
 def llm_mockup(prompt, top_k=1, top_p=0.9, temp=0.5):
@@ -98,42 +103,52 @@ def llm_mockup(prompt, top_k=1, top_p=0.9, temp=0.5):
 
 
 def get_context_prompt(question, context):
+
     contextual_prompt = (
-        "Use the following context to answer the question at the end. "
-        "Keep the answer as concise as possible.\n"
-        "Context:\n"
+        "Nutze folgenden Kontext um die Frage am Ende zu beantworten. "
+        "Halte die Antwort so kurz wie möglich.\n"
+        "Nutze ausschließlich Informationen aus dem Kontext.\n"
+        "Hast Du keinen Kontext, sage dies dem User.\n"
+        "Kontext:\n"
         f"{context}"
-        "\nQuestion:\n"
+        "\nFrage:\n"
         f"{question}"
     )
-
     return contextual_prompt
 
 
-if __name__ == "__main__":
-    # Quick RAG sample check
-    from parameters import DATA_PATH, COLLECTION_NAME
 
-    make_collection(DATA_PATH, COLLECTION_NAME)
+# if __name__ == "__main__":
+#     # Quick RAG sample check
+#     from parameters import DATA_PATH, COLLECTION_NAME
+#
+#     make_collection(DATA_PATH, COLLECTION_NAME)
+#
+#     collection = get_collection(CHROMA_DATA_PATH, COLLECTION_NAME)
+#
+#     # Query
+#     query = "Where can I learn about artificial intelligence in Berlin?"
+#     # query = "What happened to John McClane in Christmas?"
+#     # query = "Who is Sherlock Holmes?"
+#
+#     print("\nQuery:", query)
+#
+#     relevant_text = get_relevant_text(collection, query)
+#
+#     print("\nRelevant text:")
+#     print(relevant_text)
+#
+#     # LLM Cli
+#     print("\nQuering LLM...")
+#     context_query = get_context_prompt(query, relevant_text)
+#     bot_response = generate(context_query)
+#
+#     print("\nModel Answer:")
+#     print(bot_response)
 
+if __name__ == '__main__':
+    from parameters import CHROMA_DATA_PATH, COLLECTION_NAME, MODEL
     collection = get_collection(CHROMA_DATA_PATH, COLLECTION_NAME)
 
-    # Query
-    query = "Where can I learn about artificial intelligence in Berlin?"
-    # query = "What happened to John McClane in Christmas?"
-    # query = "Who is Sherlock Holmes?"
-
-    print("\nQuery:", query)
-
-    relevant_text = get_relevant_text(collection, query)
-
-    print("\nRelevant text:")
-    print(relevant_text)
-
-    # LLM Cli
-    print("\nQuering LLM...")
-    context_query = get_context_prompt(query, relevant_text)
-    bot_response = generate(context_query)
-
-    print("\nModel Answer:")
-    print(bot_response)
+    text = get_relevant_text(collection, 'Was ist das Abdomen?')
+    print(text)

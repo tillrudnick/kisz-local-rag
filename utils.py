@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from pypdf import PdfReader
 
 
@@ -22,6 +23,10 @@ def read_file(doc):
     elif doc.endswith('.pdf'):
         pdf_reader = PdfReader(doc)
         text = ''.join([page.extract_text() for page in pdf_reader.pages])
+    elif doc.endswith('.csv'):
+        df = pd.read_csv(doc)
+        json_data = df.to_json(orient='records')
+        print(json_data[0])
     return text
 
 
