@@ -24,8 +24,9 @@ def format_json_to_string(data):
     for key, value in data.items():
         # Format the key-value pair as "key: value"
         # If the value is None, represent it as 'null'
-        formatted_pair = f"{key}: {value if value is not None else 'null'}"
-        formatted_pairs.append(formatted_pair)
+        if key in ['Begriffe', 'Begriffe für Laientext', 'Begriffe für Profitext', 'vermeiden beim Laien', 'Glossardefinition']:
+            formatted_pair = f"{key}: {value if value is not None else 'null'}"
+            formatted_pairs.append(formatted_pair)
 
     # Join all formatted pairs with a comma and a space
     result_string = ', '.join(formatted_pairs)

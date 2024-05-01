@@ -65,7 +65,7 @@ def get_collection(vector_store_path, collection_name):
     return collection
 
 
-def get_relevant_text(collection, query='', nresults=2, sim_th=0.5):
+def get_relevant_text(collection, query='', nresults=3, sim_th=0.5):
     """Get relevant text from a collection for a given query"""
 
     query_result = collection.query(query_texts=query, n_results=nresults)
@@ -108,7 +108,7 @@ def generate(prompt, tokenizer, model, top_k=5, top_p=0.9, temp=0.2):
     # Decode the generated ids to text
     generated_text = tokenizer.decode(response[0], skip_special_tokens=True)
     print(generated_text)
-    answer = generated_text.split("\n")[-2]
+    answer = generated_text.split("assistant")[-1]
     print('answer: ')
     print(answer)
     return answer
@@ -127,7 +127,11 @@ def get_context_prompt(question, context):
         "Hinter 'Begriffe für Laientext:' stehen Ausdrücke, die im Laientext verwendet werden sollen.\n"
         "Hinter 'Begriffe für Profitext:' stehen Ausdrücke, die im Profitext verwendet werden sollen.\n"
         "Hinter 'vermeiden beim Laien:' stehen Ausdrücke, die im Laientext vermieden werden sollen.\n"
-        # "Fasse Dich in Deiner Antwort möglichst kurz und präzise.\n"
+        "Hinter 'Glossardefinition:' steht die Definition des Begriffs.\n"
+        "Erkläre den gesuchten Begriff falls eine Glossardefinition vorhanden ist.\n"
+        "Nutze zur Erklärung ausschließlich die Glossardefinition.\n"
+        "Gebe Ausdrücke an, die im Laientext und Profitext verwendet werden sollen.\n"
+        "Gebe Ausdrücke an, die vermieden werden sollen.\n"
         "Kontext:\n"
         f"{context}\n"
         "\nFrage:\n"

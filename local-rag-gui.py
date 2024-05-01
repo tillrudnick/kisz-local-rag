@@ -21,7 +21,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         torch_dtype=torch.float16,
-        trust_remote_code=True,
+        trust_remote_code=False,
         device_map="auto",
         use_flash_attention_2=True
     )
@@ -31,7 +31,7 @@ def main():
         context_query = get_context_prompt(user_msg, relevant_text)
         bot_response = generate(context_query, tokenizer, model, top_k=top_k, top_p=top_p, temp=temp)
         # return bot_response, relevant_text
-        return f"Context: {relevant_text}\n\nResponse: {bot_response}"
+        return f"Context:\n {relevant_text}\n\nResponse: {bot_response}"
 
 
     chatgui = gr.ChatInterface(

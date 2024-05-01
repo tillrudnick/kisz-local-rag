@@ -8,6 +8,8 @@ DATA_PATH = "sample_data/"
 # EMBEDDING_MODEL = "multi-qa-MiniLM-L6-cos-v1"
 # EMBEDDING_MODEL = "distiluse-base-multilingual-cased-v1"
 EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
+# EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# EMBEDDING_MODEL = "danielheinz/e5-base-sts-en-de"
 
 # Vector Store
 CHROMA_DATA_PATH = "chroma_data/"
