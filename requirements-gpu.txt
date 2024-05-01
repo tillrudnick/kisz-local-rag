@@ -1,0 +1,19 @@
+--extra-index-url https://download.pytorch.org/whl/cu121
+jupyter==1.0.0
+transformers==4.35.2
+ctransformers==0.2.27
+langchain==0.0.339
+torch==2.1.1
+sentence-transformers==2.2.2
+faiss-cpu==1.7.4
+evaluate==0.4.1
+rouge_score==0.1.2
+sacremoses==0.1.1
+sacrebleu==2.3.2
+pandas==2.1.3
+openpyxl==3.1.2
+accelerate==0.24.1
+bitsandbytes==0.41.2.post2
+
+# NOTE:
+# flash attention has to be installed manually afterwards: `pip3 install flash-attn` (with access to GPUs)

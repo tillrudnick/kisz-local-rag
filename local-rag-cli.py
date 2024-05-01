@@ -14,14 +14,35 @@ import os
 def main():
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-    tokenizer = AutoTokenizer.from_pretrained(MODEL, padding_side="left")
+    # print('1')
+    # tokenizer = AutoTokenizer.from_pretrained(MODEL, padding_side="left")
+    # print('2')
+    # print(MODEL)
+    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # print("Using device:", device)
+    # model = AutoModelForCausalLM.from_pretrained(
+    #     MODEL,
+    #     torch_dtype=torch.float16,
+    #     trust_remote_code=True,
+    #     device_map="auto",
+    #     use_flash_attention_2=True
+    # ).to(device)
+    # print('3')
+    torch.backends.cuda.matmul.allow_tf32 = True
+    torch.backends.cudnn.allow_tf32 = True
+
+    # Regular LeoLM Mistral Chat Model
+    model_id = MODEL
+    tokenizer = AutoTokenizer.from_pretrained(model_id, padding_side="left")
     model = AutoModelForCausalLM.from_pretrained(
-        MODEL,
+        model_id,
         torch_dtype=torch.float16,
-        use_cache=True
+        trust_remote_code=True,
+        device_map="auto",
+        use_flash_attention_2=True
     )
 
-    # make_collection(DATA_PATH, COLLECTION_NAME)
+    # # make_collection(DATA_PATH, COLLECTION_NAME)
     collection = get_collection(CHROMA_DATA_PATH, COLLECTION_NAME)
 
     print(f"\n============== Local RAG (Model: {MODEL}) ==============")
@@ -31,19 +52,24 @@ def main():
         if user_input == 'q':
             break
 
-        relevant_text = get_relevant_text(collection, user_input, sim_th=0.1)
-        context_query = get_context_prompt(user_input, relevant_text)
-        print('context_query: ')
-        print(context_query)
+        relevant_text = get_relevant_text(collection, user_input, sim_th=0.5)
+        if relevant_text:
+            context_query = get_context_prompt(user_input, relevant_text)
+            print('context_query: ')
+            print(f"\n============== Promt: ==============")
+            print(context_query)
+            print(f"\n==============        ==============")
 
-        rag_response = generate(
-            context_query,
-            tokenizer=tokenizer,
-            model=model,
-            top_k=3,
-            top_p=0.9,
-            temp=0.3
-        )
+            rag_response = generate(
+                context_query,
+                tokenizer=tokenizer,
+                model=model,
+                top_k=3,
+                top_p=0.9,
+                temp=0.3
+            )
+        else:
+            rag_response = 'Kein Kontext verfügbar.'
 
         print("Answer:")
         print(rag_response)
