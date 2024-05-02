@@ -1,6 +1,6 @@
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline, Pipeline
-from parameters import DATA_PATH, CHROMA_DATA_PATH, COLLECTION_NAME, MODEL
+from parameters import DATA_PATH, CHROMA_DATA_PATH, COLLECTION_NAME_ONE, MODEL
 from langchain.llms.ctransformers import CTransformers
 from langchain.llms.huggingface_pipeline import HuggingFacePipeline
 from transformers import AutoTokenizer, AutoModelForCausalLM

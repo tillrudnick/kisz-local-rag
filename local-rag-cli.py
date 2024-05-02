@@ -7,7 +7,7 @@ from ragfuncs import (
     get_context_prompt,
     generate
 )
-from parameters import DATA_PATH, CHROMA_DATA_PATH, COLLECTION_NAME, MODEL
+from parameters import DATA_PATH, CHROMA_DATA_PATH, COLLECTION_NAME_ONE, MODEL
 import os
 
 
@@ -43,7 +43,7 @@ def main():
     )
 
     # # make_collection(DATA_PATH, COLLECTION_NAME)
-    collection = get_collection(CHROMA_DATA_PATH, COLLECTION_NAME)
+    collection = get_collection(CHROMA_DATA_PATH, COLLECTION_NAME_ONE)
 
     print(f"\n============== Local RAG (Model: {MODEL}) ==============")
     print("(Press 'q' to quit)")

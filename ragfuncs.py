@@ -3,19 +3,18 @@ import os
 import chromadb
 from chromadb.utils import embedding_functions
 import requests, json, random
-from parameters import EMBEDDING_MODEL, CHROMA_DATA_PATH
-from parameters import LLMBASEURL, MODEL
+from parameters import CHROMA_DATA_PATH
 from load_csv import load_csv
 import torch
 
 
-def make_collection(data_path, collection_name, skip_included_files=True):
+def make_collection(data_path, collection_name, embedding_model_name, skip_included_files=True):
     """Create vector store collection from a set of documents"""
 
     client = chromadb.PersistentClient(path=CHROMA_DATA_PATH)
 
     embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name=EMBEDDING_MODEL
+        model_name=embedding_model_name
     )
 
     collection = client.get_or_create_collection(
@@ -51,13 +50,13 @@ def make_collection(data_path, collection_name, skip_included_files=True):
         )
 
 
-def get_collection(vector_store_path, collection_name):
+def get_collection(vector_store_path, collection_name, embedding_model_name):
     """Load a saved vector store collection"""
 
     print(f"Loading collection {collection_name} ...")
     client = chromadb.PersistentClient(path=vector_store_path)
     embedding_func = embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name=EMBEDDING_MODEL
+        model_name=embedding_model_name
     )
 
     collection = client.get_collection(name=collection_name, embedding_function=embedding_func)
@@ -78,7 +77,7 @@ def get_relevant_text(collection, query='', nresults=3, sim_th=0.5):
 
 
 # LLM Funcs (Ollama)
-def generate(prompt, tokenizer, model, top_k=5, top_p=0.9, temp=0.2):
+def generate(prompt, tokenizer, model, top_k=1, top_p=0.1, temp=0.1):
     # Tokenize the input prompt for the model
     inputs = tokenizer(prompt, return_tensors="pt", padding=True).to(model.device)
 
@@ -124,14 +123,15 @@ def get_context_prompt(question, context):
     contextual_prompt = (
         "Nutze folgenden Kontext, um die Frage am Ende zu beantworten.\n"
         "Nutze ausschließlich Informationen aus dem Kontext.\n"
-        "Hinter 'Begriffe für Laientext:' stehen Ausdrücke, die im Laientext verwendet werden sollen.\n"
-        "Hinter 'Begriffe für Profitext:' stehen Ausdrücke, die im Profitext verwendet werden sollen.\n"
-        "Hinter 'vermeiden beim Laien:' stehen Ausdrücke, die im Laientext vermieden werden sollen.\n"
-        "Hinter 'Glossardefinition:' steht die Definition des Begriffs.\n"
+        "Hinter 'Begriffe für Laientext:' stehen im Kontext Ausdrücke, die im Laientext verwendet werden sollen.\n"
+        "Hinter 'Begriffe für Profitext:' stehen im Kontext Ausdrücke, die im Profitext verwendet werden sollen.\n"
+        "Hinter 'vermeiden beim Laien:' stehen im Kontext Ausdrücke, die im Laientext vermieden werden sollen.\n"
+        "Gebe in Deiner Antwort Ausdrücke an, die im Laientext und Profitext verwendet werden sollen.\n"
+        "Gebe in Deiner Antwort Ausdrücke an, die vermieden werden sollen.\n"
+        "Hinter 'Glossardefinition:' steht im Kontext die Definition des Begriffs.\n"
         "Erkläre den gesuchten Begriff falls eine Glossardefinition vorhanden ist.\n"
-        "Nutze zur Erklärung ausschließlich die Glossardefinition.\n"
-        "Gebe Ausdrücke an, die im Laientext und Profitext verwendet werden sollen.\n"
-        "Gebe Ausdrücke an, die vermieden werden sollen.\n"
+        "Nutze in Deiner Antwort zur Erklärung ausschließlich die Glossardefinition.\n"
+        "Nutze in Deiner Antwort wenn möglich nur das erste Element im Kontext mit dem höchsten Wert für similarity.\n"
         "Kontext:\n"
         f"{context}\n"
         "\nFrage:\n"
@@ -140,6 +140,36 @@ def get_context_prompt(question, context):
 
     return contextual_prompt
 
+
+#     """
+# <|im_start|>system
+# {system_message}<|im_end|>
+# <|im_start|>user
+# {prompt}<|im_end|>
+# <|im_start|>assistant
+# """
+#     system_message = ''.join(["Nutze folgenden Kontext, um die Frage am Ende zu beantworten.\n",
+#                               "Nutze ausschließlich Informationen aus dem Kontext.\n",
+#                               "Hinter 'Begriffe für Laientext:' stehen im Kontext Ausdrücke, die im Laientext verwendet werden sollen.\n",
+#                               "Hinter 'Begriffe für Profitext:' stehen im Kontext Ausdrücke, die im Profitext verwendet werden sollen.\n",
+#                               "Hinter 'vermeiden beim Laien:' stehen im Kontext Ausdrücke, die im Laientext vermieden werden sollen.\n",
+#                               "Gebe in Deiner Antwort Ausdrücke an, die im Laientext und Profitext verwendet werden sollen.\n",
+#                               "Gebe in Deiner Antwort Ausdrücke an, die vermieden werden sollen.\n",
+#                               "Hinter 'Glossardefinition:' steht im Kontext die Definition des Begriffs.\n",
+#                               "Erkläre den gesuchten Begriff falls eine Glossardefinition vorhanden ist.\n",
+#                               "Nutze in Deiner Antwort zur Erklärung ausschließlich die Glossardefinition.\n",
+#                               "Nutze in Deiner Antwort wenn möglich nur das erste Element im Kontext mit dem höchsten Wert für similarity.\n"]),
+#
+#     contextual_prompt = (f"<|im_start|>system\n{system_message}<|im_end|>\n",
+#                          f"<|im_start|>user\n",
+#                          "Kontext:\n"
+#                          f"{context}\n"
+#                          "\nFrage:\n"
+#                          f"{question}"
+#                          f"<|im_end|>\n",
+#                          f"<|im_start|>assistant\n",
+#
+#                          )
 
 
 # if __name__ == "__main__":
@@ -171,8 +201,8 @@ def get_context_prompt(question, context):
 #     print(bot_response)
 
 if __name__ == '__main__':
-    from parameters import CHROMA_DATA_PATH, COLLECTION_NAME, MODEL
-    collection = get_collection(CHROMA_DATA_PATH, COLLECTION_NAME)
+    from parameters import CHROMA_DATA_PATH, COLLECTION_NAME_ONE, MODEL
+    collection = get_collection(CHROMA_DATA_PATH, COLLECTION_NAME_ONE)
 
     text = get_relevant_text(collection, 'Was ist das Abdomen?')
     print(text)
